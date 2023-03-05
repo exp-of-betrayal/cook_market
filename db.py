@@ -2,7 +2,7 @@ import random
 import sqlite3
 import string
 import time
-import configs as config
+import configs as cnf
 
 
 def generate_token(id, need_save=True):
@@ -17,90 +17,19 @@ def generate_token(id, need_save=True):
     return token
 
 
-def check_token(id: int, token: str):
+def registry(email: str, password: str, username: str, phone: str = None, avatar: bytearray = None):
     connection = sqlite3.connect("general_database.db")
     cursor = connection.cursor()
-    data = cursor.execute(
-        "SELECT * FROM Tokens WHERE Token = (?) and UserId = (?);", (token, id)).fetchone()
-    if data == "None":
-        return 1
-    else:
-        if int(time.time()) - data[3] > config.token.TOKEN_LIFE_TIME:
-            cursor.execute(f"delete from Tokens where id = {data[0]}")
-        return 0
-
-
-def write_token(id: int, token: str, token_created_time: time):
-    connection = sqlite3.connect("general_database.db")
-    cursor = connection.cursor()
-    cursor.execute('''INSERT into Tokens (UserId, Token, TokenTime) VALUES (?, ?, ?)''',
-                   (id, token, token_created_time)).fetchone()
-    cursor.close()
-    connection.close()
-
-
-def registry_new_acc(username: str, password: str, email: str, phone=None, avatar_image=None):
-    connection = sqlite3.connect('general_database.db')
-    cursor = connection.cursor()
-
-    cursor.execute('''INSERT into Auth (Email, Password) VALUES (?, ?)''', (email, password)).fetchone()
+    cursor.execute('''insert into Auth (Email, Password) VALUES (?, ?)''', (email, password))
     connection.commit()
-    user_id = cursor.execute('''select max(Id) from Auth''').fetchone()
-    user_id = user_id[0]
-    token = generate_token(user_id)
-    connection.commit()
-    cursor.execute("""INSERT into General_info (UserId, Username, Email, Password) VALUES (?, ?, ?, ?)""",
-                   (user_id, username, email, password)).fetchone()
-    connection.commit()
-    cursor.execute("INSERT into Tokens (UserId, Token) values (?, ?)", (user_id, token))
+    id = cursor.execute('''select * from Auth where Email = (?) and Password=(?)''', (email, password)).fetchone()
+    id = id[0]
+    # takes first column (id) from new row
+    cursor.execute('''insert into General_info (UserId, Username, Email, Phone, Password, Avatar) 
+    VALUES (?, ?, ?, ?, ?, ?)''', (id, username, email, phone, password, avatar))
     connection.commit()
 
-    cursor.close()
-    connection.close()
-    return token, user_id
 
-
-def is_registry(email):
-    connection = sqlite3.connect("general_database.db")
-    cursor = connection.cursor()
-    data = cursor.execute(
-        "SELECT * FROM Auth WHERE Email = (?)", (email,)).fetchone()
-    if data is None:
-        return False
-    else:
-        return True
-
-
-def data_correctly(nick, password):
-    connection = sqlite3.connect("general_database.db")
-    cursor = connection.cursor()
-    data = cursor.execute(
-        "SELECT * FROM Auth WHERE Email = (?) and Password = (?);", (nick, password)).fetchone()
-    if is_registry(nick) == 0:
-        return -1
-    elif data is None:
-        return 1
-    else:
-        return 0
-
-
-def get_id_by_email(email: str):
-    connection = sqlite3.connect("general_database.db")
-    cursor = connection.cursor()
-    data = cursor.execute(
-        "SELECT UserId FROM General_info WHERE Email = (?);", (email,)).fetchone()
-    if data is None:
-        return 1
-    else:
-        return data[0]
-
-
-def is_mail_registry(email: str):
-    connection = sqlite3.connect("general_database.db")
-    cursor = connection.cursor()
-    data = cursor.execute(
-        "SELECT Email FROM Auth WHERE Email = (?);", (email,)).fetchone()
-    if data is None:
-        return False
-    else:
-        return True
+if __name__ == "__main__":
+    registry('testmail5', '0000', 'bleb')
+    print(result)
