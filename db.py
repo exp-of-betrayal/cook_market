@@ -32,4 +32,3 @@ def registry(email: str, password: str, username: str, phone: str = None, avatar
 
 if __name__ == "__main__":
     registry('testmail5', '0000', 'bleb')
-    print(result)
