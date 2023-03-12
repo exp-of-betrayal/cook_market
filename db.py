@@ -2,7 +2,25 @@ import random
 import sqlite3
 import string
 import time
-import configs as cnf
+from functools import wraps
+from configuration import database as db
+
+
+def db_handle(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        connection = sqlite3.connect(db.filename)
+        cursor = connection.cursor()
+        try:
+            f(*args, **kwargs, cursor=cursor)
+        except sqlite3.Error as error:
+            print(f"'\033[96m'|{f.__name__}| SQL error -> ", error, "\033[95m")
+        except BaseException as error:
+            print(f"'\033[96m'|{f.__name__}| Python error -> ", error, "\033[95m")
+        connection.commit()
+        cursor.close()
+        connection.close()
+    return wrapper
 
 
 def generate_token(id, need_save=True):
@@ -17,18 +35,11 @@ def generate_token(id, need_save=True):
     return token
 
 
-def registry(email: str, password: str, username: str, phone: str = None, avatar: bytearray = None):
-    connection = sqlite3.connect("general_database.db")
-    cursor = connection.cursor()
+@db_handle
+def registry(email: str, password: str, username: str, phone: str = None, avatar: bytearray = None, cursor=None):
+
     cursor.execute('''insert into Auth (Email, Password) VALUES (?, ?)''', (email, password))
-    connection.commit()
     id = cursor.execute('''select * from Auth where Email = (?) and Password=(?)''', (email, password)).fetchone()
     id = id[0]
-    # takes first column (id) from new row
     cursor.execute('''insert into General_info (UserId, Username, Email, Phone, Password, Avatar) 
     VALUES (?, ?, ?, ?, ?, ?)''', (id, username, email, phone, password, avatar))
-    connection.commit()
-
-
-if __name__ == "__main__":
-    registry('testmail5', '0000', 'bleb')
